@@ -33,7 +33,7 @@ public class Lexer {
         TOKEN_PRIORITIES.put(TokenType.KEYWORD, 3);
         TOKEN_PRIORITIES.put(TokenType.EXPONENT, 2);
         TOKEN_PRIORITIES.put(TokenType.OPERATOR, 2);
-        TOKEN_PRIORITIES.put(TokenType.DECIMAL, 2);
+        TOKEN_PRIORITIES.put(TokenType.DECIMAL, 3);
         TOKEN_PRIORITIES.put(TokenType.INTEGER, 2);
         TOKEN_PRIORITIES.put(TokenType.IDENTIFIER, 1);
     }

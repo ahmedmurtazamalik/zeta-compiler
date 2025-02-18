@@ -2,14 +2,13 @@ package org.azaleas;
 
 import org.azaleas.compiler.lexer.Lexer;
 import org.azaleas.compiler.lexer.Token;
+import org.azaleas.compiler.lexer.TokenType;
 
 import java.util.List;
 
-import org.azaleas.compiler.lexer.Lexer;
-import org.azaleas.compiler.lexer.Token;
-import org.azaleas.compiler.preprocessor.Preprocessor;
-
-import java.util.List;
+import org.azaleas.compiler.lexer.Preprocessor;
+import org.azaleas.compiler.symboltable.SymbolTable;
+import org.azaleas.compiler.symboltable.SymbolTableEntry;
 
 public class Main {
     public static void main(String[] args) {
@@ -46,5 +45,15 @@ public class Main {
                     token.type(),
                     token.value());
         }
+
+        SymbolTable symbolTable = new SymbolTable();
+        symbolTable.populateSymbolTable(tokens);
+
+        System.out.println("\n-------------------\n");
+        System.out.println("Symbol Table:");
+        for (SymbolTableEntry entry : symbolTable.getEntries()) {
+            System.out.println(entry);
+        }
+
     }
 }

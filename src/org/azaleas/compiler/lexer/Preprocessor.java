@@ -1,4 +1,4 @@
-package org.azaleas.compiler.preprocessor;
+package org.azaleas.compiler.lexer;
 
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
