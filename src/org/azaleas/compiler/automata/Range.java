@@ -9,6 +9,14 @@ public class Range {
         this.end = end;
     }
 
+    public char getStart() {
+        return start;
+    }
+
+    public char getEnd() {
+        return end;
+    }
+
     public boolean contains(char c) {
         return c >= start && c <= end;
     }
