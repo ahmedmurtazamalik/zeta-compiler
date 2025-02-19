@@ -10,19 +10,17 @@ public class Range {
     }
 
     public boolean contains(char c) {
-        // TODO: Return true if the character is within the range.
-        return false;
+        return c >= start && c <= end;
     }
 
-    @Override
     public boolean equals(Object o) {
-        // TODO: Define equality based on start and end characters.
-        return false;
+        if (this == o) return true;
+        if (!(o instanceof Range)) return false;
+        Range range = (Range) o;
+        return start == range.start && end == range.end;
     }
 
-    @Override
     public int hashCode() {
-        // TODO: Return the hash code based on start and end characters.
-        return 0;
+        return 31 * start + end;
     }
 }

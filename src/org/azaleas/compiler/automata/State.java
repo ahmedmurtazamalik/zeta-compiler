@@ -66,21 +66,23 @@ public class State {
 
     @Override
     public boolean equals(Object o) {
-        // TODO: Define equality based on the unique state id.
-        return false;
+        if (this == o) return true;
+        if (!(o instanceof State)) return false;
+        return this.id == ((State) o).id;
     }
 
     @Override
     public int hashCode() {
         // TODO: Return the hash code based on the state's unique id.
-        return 0;
+        // id is unique anyway?
+        return id;
     }
 
     public int getId() {
         return id;
     }
 
-    public Map<Object, Object> getTransitions() {
+    public Map<Object, State> getTransitions() {
         return Map.copyOf(transitions);
     }
 
