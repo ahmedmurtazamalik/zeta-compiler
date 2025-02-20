@@ -1,5 +1,6 @@
 package org.azaleas;
 
+import org.azaleas.compiler.errors.ErrorHandler;
 import org.azaleas.compiler.lexer.Lexer;
 import org.azaleas.compiler.lexer.Token;
 import org.azaleas.compiler.lexer.TokenType;
@@ -35,8 +36,11 @@ public class Main {
         System.out.println(preprocessed);
         System.out.println("\n-------------------\n");
 
+
+
         // Tokenize
-        Lexer lexer = new Lexer();
+        ErrorHandler errorHandler = new ErrorHandler();
+        Lexer lexer = new Lexer(errorHandler);
         List<Token> tokens = lexer.tokenize(preprocessed);
 
         System.out.println("Tokens:");
@@ -45,6 +49,9 @@ public class Main {
                     token.type(),
                     token.value());
         }
+
+        System.out.println("\nErrors:");
+        errorHandler.printErrors();
 
         SymbolTable symbolTable = new SymbolTable();
         symbolTable.populateSymbolTable(tokens);

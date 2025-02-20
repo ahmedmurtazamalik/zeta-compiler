@@ -31,4 +31,8 @@ public class Range {
     public int hashCode() {
         return 31 * start + end;
     }
+
+    public String toString() {
+        return "[" + start + "-" + end + "]";
+    }
 }

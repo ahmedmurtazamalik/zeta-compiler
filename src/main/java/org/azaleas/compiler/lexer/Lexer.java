@@ -1,4 +1,5 @@
 package org.azaleas.compiler.lexer;
+import org.azaleas.compiler.errors.ErrorHandler;
 
 import java.util.HashMap;
 import java.util.List;
@@ -13,6 +14,7 @@ public class Lexer {
     private int position = 0;
     private String input;
     private List<Token> tokens;
+    private ErrorHandler errorHandler;
 
     static {
         PATTERNS.put(TokenType.WHITESPACE, "[ \t\n\r\f]+");
@@ -38,6 +40,11 @@ public class Lexer {
         TOKEN_PRIORITIES.put(TokenType.IDENTIFIER, 1);
     }
 
+    public Lexer(ErrorHandler errorHandler) {
+        this.tokens = new ArrayList<>();
+        this.errorHandler = errorHandler;
+    }
+
     public Lexer() {
         this.tokens = new ArrayList<>();
     }
@@ -46,6 +53,7 @@ public class Lexer {
         this.input = input;
         this.position = 0;
         this.tokens.clear();
+        int line = 1;  // Track line numbers for error reporting
 
         while (position < input.length()) {
             boolean matched = false;
@@ -69,12 +77,18 @@ public class Lexer {
             }
 
             if (!matched) {
-                throw new RuntimeException("Unexpected character at position " + position + ": " + input.charAt(position));
+                char invalidChar = input.charAt(position);
+                errorHandler.addError(line, "Unexpected token '" + invalidChar + "' at position " + position);
+                position++;  // Skip the invalid character and continue
+                continue;
             }
 
-            if (bestMatch.type() != TokenType.WHITESPACE) {
+            if (bestMatch.type() == TokenType.WHITESPACE) {
+                line += bestMatch.value().chars().filter(c -> c == '\n').count();  // Track new lines
+            } else {
                 tokens.add(bestMatch);
             }
+
             position += bestMatch.value().length();
         }
 

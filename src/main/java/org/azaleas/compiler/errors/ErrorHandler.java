@@ -1,7 +1,18 @@
 package org.azaleas.compiler.errors;
+import java.util.*;
 
 public class ErrorHandler {
-    public void addError(int line, String message) { /* Track errors */ }
+    private List<String> errors = new ArrayList<>();
 
-    public void printErrors() { /* Display errors */ }
+    public void addError(int line, String message) {
+        errors.add("Line " + line + ": " + message);
+    }
+
+    public void printErrors() {
+        if (errors.isEmpty()) {
+            System.out.println("No errors detected.");
+        } else {
+            errors.forEach(System.out::println);
+        }
+    }
 }
