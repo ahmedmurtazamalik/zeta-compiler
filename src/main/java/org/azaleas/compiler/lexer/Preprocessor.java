@@ -1,4 +1,4 @@
-package org.azaleas.compiler.preprocessor;
+package org.azaleas.compiler.lexer;
 
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -7,23 +7,23 @@ public class Preprocessor {
     public String process(String input) {
         // Remove all whitespace at the start and end of lines
         input = input.replaceAll("^\\s+|\\s+$", "");
-        
+
         // Replace multiple whitespace with a single space
         input = input.replaceAll("\\s+", " ");
-        
+
         // Remove comments
         input = removeComments(input);
-        
+
         return input;
     }
 
     private String removeComments(String input) {
         // Remove multi-line comments
         input = input.replaceAll("<<.*?>>", "");
-        
+
         // Remove single-line comments
         input = input.replaceAll("<[^>]*>", "");
-        
+
         return input;
     }
 }

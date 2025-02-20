@@ -2,14 +2,16 @@ package org.azaleas.compiler.symboltable;
 
 import org.azaleas.compiler.lexer.TokenType;
 
+import java.util.Objects;
+
 public class SymbolTableEntry {
     private String name;
     private String type;
     private Object value;
-    private TokenType scope;
+    private String scope;
     private boolean isConstant;
 
-    public SymbolTableEntry(String name, String type, Object value, TokenType scope, boolean isConstant) {
+    public SymbolTableEntry(String name, String type, Object value, String scope, boolean isConstant) {
         this.name = name;
         this.type = type;
         this.value = value;
@@ -29,7 +31,7 @@ public class SymbolTableEntry {
         return value;
     }
 
-    public TokenType getScope() {
+    public String getScope() {
         return scope;
     }
 
@@ -55,7 +57,7 @@ public class SymbolTableEntry {
     public boolean equals(Object obj) {
         if (obj instanceof SymbolTableEntry) {
             SymbolTableEntry entry = (SymbolTableEntry) obj;
-            return name.equals(entry.name) && type.equals(entry.type) && scope == entry.scope && isConstant == entry.isConstant;
+            return name.equals(entry.name) && type.equals(entry.type) && Objects.equals(scope, entry.scope) && isConstant == entry.isConstant;
         }
         return false;
     }

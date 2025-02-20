@@ -40,26 +40,26 @@ public class Regex {
     public String toPostfix() {
         StringBuilder output = new StringBuilder();
         Stack<Character> operators = new Stack<>();
-        
+
         // Insert explicit concatenation operator '.'
         StringBuilder augmentedPattern = new StringBuilder();
         for (int i = 0; i < pattern.length(); i++) {
             char current = pattern.charAt(i);
             augmentedPattern.append(current);
-            
+
             if (i + 1 < pattern.length()) {
                 char next = pattern.charAt(i + 1);
                 if (isLetter(current) && isLetter(next) ||
-                    isLetter(current) && next == '(' ||
-                    current == ')' && isLetter(next) ||
-                    current == '*' && isLetter(next) ||
-                    current == '*' && next == '(' ||
-                    current == ')' && next == '(') {
+                        isLetter(current) && next == '(' ||
+                        current == ')' && isLetter(next) ||
+                        current == '*' && isLetter(next) ||
+                        current == '*' && next == '(' ||
+                        current == ')' && next == '(') {
                     augmentedPattern.append('.');
                 }
             }
         }
-        
+
         for (char c : augmentedPattern.toString().toCharArray()) {
             if (isLetter(c)) {
                 output.append(c);
@@ -79,7 +79,7 @@ public class Regex {
                 operators.push(c);
             }
         }
-        
+
         while (!operators.isEmpty()) {
             if (operators.peek() != '(') {
                 output.append(operators.pop());
@@ -87,10 +87,10 @@ public class Regex {
                 operators.pop();
             }
         }
-        
+
         return output.toString();
     }
-    
+
     private boolean isLetter(char c) {
         return Character.isLetterOrDigit(c) || c == '_' || c == '-';
     }

@@ -7,17 +7,18 @@ import java.util.HashMap;
 import java.util.Queue;
 import java.util.LinkedList;
 
+
 public class DFA {
     private State startState;
     private Set<State> acceptStates;
     private Set<State> allStates;
-    
+
     public DFA() {
         this.startState = new State();
         this.acceptStates = Set.of(new State());
         this.allStates = Set.of(startState, acceptStates.iterator().next());
     }
-    
+
     public boolean accepts(String input) {
         State currentState = startState;
         for (char c : input.toCharArray()) {
@@ -60,35 +61,35 @@ public class DFA {
         Set<Set<State>> dfaStates = new HashSet<>();
         Map<Set<State>, State> nfaStatesToDfaState = new HashMap<>();
         Queue<Set<State>> unprocessedStates = new LinkedList<>();
-        
+
         // Create start state from NFA's epsilon closure
         Set<State> nfaStartStates = nfa.getEpsilonClosure(nfa.getStartState());
         State dfaStartState = new State();
         dfaStates.add(nfaStartStates);
         nfaStatesToDfaState.put(nfaStartStates, dfaStartState);
         unprocessedStates.offer(nfaStartStates);
-        
+
         // Create DFA instance
         DFA dfa = new DFA();
         dfa.startState = dfaStartState;
         dfa.allStates = new HashSet<>();
         dfa.allStates.add(dfaStartState);
         dfa.acceptStates = new HashSet<>();
-        
+
         // Process all states
         while (!unprocessedStates.isEmpty()) {
             Set<State> currentNFAStates = unprocessedStates.poll();
             State currentDFAState = nfaStatesToDfaState.get(currentNFAStates);
-            
+
             // Check if this DFA state should be accepting
             if (currentNFAStates.stream().anyMatch(s -> nfa.getAcceptStates().contains(s))) {
                 dfa.acceptStates.add(currentDFAState);
             }
-            
+
             // For each input symbol
             for (Character symbol : nfa.getAlphabet()) {
                 Set<State> nextStates = new HashSet<>();
-                
+
                 // Get all possible next states from current NFA states
                 for (State nfaState : currentNFAStates) {
                     Set<State> transitions = nfa.getTransitions(nfaState, symbol);
@@ -98,7 +99,7 @@ public class DFA {
                         }
                     }
                 }
-                
+
                 if (!nextStates.isEmpty()) {
                     State nextDFAState;
                     if (!nfaStatesToDfaState.containsKey(nextStates)) {
@@ -114,7 +115,7 @@ public class DFA {
                 }
             }
         }
-        
+
         return dfa;
     }
 

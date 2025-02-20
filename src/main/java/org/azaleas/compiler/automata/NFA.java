@@ -128,7 +128,7 @@ public class NFA {
 
         for (State oldState : this.allStates) {
             State newState = stateMap.get(oldState);
-            for (Map.Entry<Object, Object> entry : oldState.getTransitions().entrySet()) {
+            for (Map.Entry<Object, State> entry : oldState.getTransitions().entrySet()) {
                 Object symbol = entry.getKey();
                 State oldTarget = (State) entry.getValue();
                 State newTarget = stateMap.get(oldTarget);
@@ -179,23 +179,43 @@ public class NFA {
     public Set<State> getEpsilonClosure(State state) {
         Set<State> closure = new HashSet<>();
         Queue<State> queue = new LinkedList<>();
-        queue.offer(state);
+        queue.add(state);
+        closure.add(state);
 
-//        while (!queue.isEmpty()) {
-//            State current = queue.poll();
-//            closure.add(current);
-//
-//            for (State next : current.getTransitions().values()) {
-//                if (next.getTransitions().containsKey('ε') && !closure.contains(next)) {
-//                    queue.offer(next);
-//                }
-//            }
-//        }
+        while (!queue.isEmpty()) {
+            State current = queue.poll();
 
+            // Follow all ε-transitions
+            for (Map.Entry<Object, State> entry : current.getTransitions().entrySet()) {
+                if (entry.getKey().equals('ε') &&
+                        !closure.contains(entry.getValue())) {
+                    closure.add(entry.getValue());
+                    queue.add(entry.getValue());
+                }
+            }
+        }
         return closure;
     }
 
     public Set<State> getTransitions(State nfaState, Character symbol) {
-        return null;
+        Set<State> transitions = new HashSet<>();
+
+        // Check direct transitions
+        State direct = nfaState.getTransition(symbol);
+        if (direct != null) {
+            transitions.add(direct);
+        }
+
+        // Check range transitions
+        for (Map.Entry<Object, State> entry : nfaState.getTransitions().entrySet()) {
+            if (entry.getKey() instanceof Range) {
+                Range range = (Range) entry.getKey();
+                if (range.contains(symbol)) {
+                    transitions.add((State) entry.getValue());
+                }
+            }
+        }
+
+        return transitions;
     }
 }

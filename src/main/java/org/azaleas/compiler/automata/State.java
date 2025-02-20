@@ -1,8 +1,7 @@
 package org.azaleas.compiler.automata;
 
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 public class State {
     private final Map<Object, State> transitions;
@@ -11,58 +10,79 @@ public class State {
     private static int nextId = 0;
 
     public State() {
-        this.transitions = Map.of();
+        this.transitions = new HashMap<>();
         this.id = nextId++;
         this.isAccepting = false;
     }
 
     public State(boolean isAccepting) {
-        this.transitions = Map.of();
+        this.transitions = new HashMap<>();
         this.id = nextId++;
         this.isAccepting = isAccepting;
     }
 
     public State(Map<Object, State> transitions, int id) {
-        this.transitions = transitions;
+        this.transitions = new HashMap<>(transitions);
         this.id = id;
         this.isAccepting = false;
     }
 
     public State(Map<Object, State> transitions, int id, boolean isAccepting) {
-        this.transitions = transitions;
+        this.transitions = new HashMap<>(transitions);
         this.id = id;
         this.isAccepting = isAccepting;
     }
 
     public void addTransition(Object symbol, State target) {
         // TODO: Add a transition on the given symbol to the target state.
-
-
+        this.transitions.put(symbol, target);
     }
 
     public State getTransition(Object symbol) {
         // TODO: Return the target state for the given symbol.
-        return null;
+        // Check for exact match first
+        State exactMatch = this.transitions.get(symbol);
+        if (exactMatch != null) {
+            return exactMatch;
+        }
+
+        // If symbol is a Character, check for ranges
+        if (symbol instanceof Character) {
+            char c = (Character) symbol;
+            for (Map.Entry<Object, State> entry : transitions.entrySet()) {
+                Object key = entry.getKey();
+                if (key instanceof Range) {
+                    Range range = (Range) key;
+                    if (range.contains(c)) {
+                        return entry.getValue();
+                    }
+                }
+            }
+        }
+
+        return null; // No transition found
     }
 
 
     @Override
     public boolean equals(Object o) {
-        // TODO: Define equality based on the unique state id.
-        return false;
+        if (this == o) return true;
+        if (!(o instanceof State)) return false;
+        return this.id == ((State) o).id;
     }
 
     @Override
     public int hashCode() {
         // TODO: Return the hash code based on the state's unique id.
-        return 0;
+        // id is unique anyway?
+        return id;
     }
 
     public int getId() {
         return id;
     }
 
-    public Map<Object, Object> getTransitions() {
+    public Map<Object, State> getTransitions() {
         return Map.copyOf(transitions);
     }
 
