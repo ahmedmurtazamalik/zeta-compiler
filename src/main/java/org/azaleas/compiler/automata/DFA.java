@@ -1,133 +1,174 @@
 package org.azaleas.compiler.automata;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.HashMap;
-import java.util.Queue;
-import java.util.LinkedList;
-
+import java.util.*;
 
 public class DFA {
-    private State startState;
-    private Set<State> acceptStates;
-    private Set<State> allStates;
 
-    public DFA() {
-        this.startState = new State();
-        this.acceptStates = Set.of(new State());
-        this.allStates = Set.of(startState, acceptStates.iterator().next());
-    }
+    public static class DFAState {
+        private final Set<State> nfaStates;
+        private final int id;
+        private final boolean isAccepting;
+        private final Map<Character, DFAState> transitions;
+        private static int nextId = 0;
 
-    public boolean accepts(String input) {
-        State currentState = startState;
-        for (char c : input.toCharArray()) {
-            currentState = getNextState(currentState, c);
-            if (currentState == null) {
-                // No valid transition, input is rejected.
-                return false;
-            }
+        public DFAState(Set<State> nfaStates, boolean isAccepting) {
+            this.nfaStates = nfaStates;
+            this.isAccepting = isAccepting;
+            this.id = nextId++;
+            this.transitions = new HashMap<>();
         }
-        return acceptStates.contains(currentState);
+
+        public int getId() {
+            return id;
+        }
+
+        public Map<Character, DFAState> getTransitions() {
+            return transitions;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof DFAState)) return false;
+            return nfaStates.equals(((DFAState) o).nfaStates);
+        }
+
+        @Override
+        public int hashCode() {
+            return nfaStates.hashCode();
+        }
+
+        public boolean isAccepting() {
+            return isAccepting;
+        }
     }
 
-    public State getStartState() {
-        return startState;
+    private final DFAState startState;
+    private final Set<DFAState> allStates;
+
+    public DFA(DFAState startState, Set<DFAState> allStates) {
+        this.startState = startState;
+        this.allStates = allStates;
     }
 
-    public Set<State> getAcceptStates() {
-        return acceptStates;
-    }
-
-    public Set<State> getAllStates() {
-        return allStates;
-    }
-
-    private State getNextState(State currentState, Object symbol) {
-        return currentState.getTransition(symbol);
-    }
-
-    public DFA minimize() {
-        // TODO: Implement DFA minimization.
-        return this; // Placeholder; return a minimized DFA.
-    }
-
-    /**
-     * (Optional) Builds a DFA from an NFA using the subset construction method.
-     * This might alternatively belong in a converter class.
-     */
     public static DFA fromNFA(NFA nfa) {
-        // ... existing code ...
-        Set<Set<State>> dfaStates = new HashSet<>();
-        Map<Set<State>, State> nfaStatesToDfaState = new HashMap<>();
-        Queue<Set<State>> unprocessedStates = new LinkedList<>();
+        Set<Character> alphabet = getAlphabet(nfa);
+        Map<Set<State>, DFAState> dfaStateMap = new HashMap<>();
+        Queue<Set<State>> queue = new LinkedList<>();
+        Set<DFAState> allDfaStates = new HashSet<>();
 
-        // Create start state from NFA's epsilon closure
-        Set<State> nfaStartStates = nfa.getEpsilonClosure(nfa.getStartState());
-        State dfaStartState = new State();
-        dfaStates.add(nfaStartStates);
-        nfaStatesToDfaState.put(nfaStartStates, dfaStartState);
-        unprocessedStates.offer(nfaStartStates);
+        Set<State> startSubset = epsilonClosure(nfa, Set.of(nfa.getStartState()));
+        DFAState dfaStart = new DFAState(startSubset, startSubset.stream().anyMatch(State::isAccepting));
+        dfaStateMap.put(startSubset, dfaStart);
+        queue.add(startSubset);
+        allDfaStates.add(dfaStart);
 
-        // Create DFA instance
-        DFA dfa = new DFA();
-        dfa.startState = dfaStartState;
-        dfa.allStates = new HashSet<>();
-        dfa.allStates.add(dfaStartState);
-        dfa.acceptStates = new HashSet<>();
+        while (!queue.isEmpty()) {
+            Set<State> currentSubset = queue.poll();
+            DFAState currentDfaState = dfaStateMap.get(currentSubset);
 
-        // Process all states
-        while (!unprocessedStates.isEmpty()) {
-            Set<State> currentNFAStates = unprocessedStates.poll();
-            State currentDFAState = nfaStatesToDfaState.get(currentNFAStates);
+            for (char symbol : alphabet) {
+                Set<State> targetSubset = computeTargetStates(currentSubset, symbol);
+                targetSubset = epsilonClosure(nfa, targetSubset);
+                if (targetSubset.isEmpty()) continue;
 
-            // Check if this DFA state should be accepting
-            if (currentNFAStates.stream().anyMatch(s -> nfa.getAcceptStates().contains(s))) {
-                dfa.acceptStates.add(currentDFAState);
-            }
-
-            // For each input symbol
-            for (Character symbol : nfa.getAlphabet()) {
-                Set<State> nextStates = new HashSet<>();
-
-                // Get all possible next states from current NFA states
-                for (State nfaState : currentNFAStates) {
-                    Set<State> transitions = nfa.getTransitions(nfaState, symbol);
-                    if (transitions != null) {
-                        for (State transition : transitions) {
-                            nextStates.addAll(nfa.getEpsilonClosure(transition));
-                        }
-                    }
+                DFAState targetDfaState = dfaStateMap.get(targetSubset);
+                if (targetDfaState == null) {
+                    targetDfaState = new DFAState(targetSubset, targetSubset.stream().anyMatch(State::isAccepting));
+                    dfaStateMap.put(targetSubset, targetDfaState);
+                    queue.add(targetSubset);
+                    allDfaStates.add(targetDfaState);
                 }
+                currentDfaState.getTransitions().put(symbol, targetDfaState);
+            }
+        }
+        return new DFA(dfaStart, allDfaStates);
+    }
 
-                if (!nextStates.isEmpty()) {
-                    State nextDFAState;
-                    if (!nfaStatesToDfaState.containsKey(nextStates)) {
-                        nextDFAState = new State();
-                        nfaStatesToDfaState.put(nextStates, nextDFAState);
-                        dfaStates.add(nextStates);
-                        unprocessedStates.offer(nextStates);
-                        dfa.allStates.add(nextDFAState);
-                    } else {
-                        nextDFAState = nfaStatesToDfaState.get(nextStates);
-                    }
-                    currentDFAState.addTransition(symbol, nextDFAState);
+    private static Set<State> computeTargetStates(Set<State> states, char symbol) {
+        Set<State> targetStates = new HashSet<>();
+        for (State s : states) {
+            for (Map.Entry<Object, Set<State>> entry : s.getTransitions().entrySet()) {
+                Object key = entry.getKey();
+                if ((key instanceof Character && (Character) key == symbol) ||
+                    (key instanceof Range && ((Range) key).contains(symbol))) {
+                    targetStates.addAll(entry.getValue());
                 }
             }
         }
+        return targetStates;
+    }
 
-        return dfa;
+    private static Set<State> epsilonClosure(NFA nfa, Set<State> states) {
+        Set<State> closure = new HashSet<>(states);
+        Stack<State> stack = new Stack<>();
+        stack.addAll(states);
+
+        while (!stack.isEmpty()) {
+            State s = stack.pop();
+            s.getTransitions().entrySet().stream()
+                .filter(e -> e.getKey() instanceof NFA.Epsilon)
+                .flatMap(e -> e.getValue().stream())
+                .filter(closure::add)
+                .forEach(stack::push);
+        }
+        return closure;
+    }
+
+    private static Set<Character> getAlphabet(NFA nfa) {
+        Set<Character> alphabet = new HashSet<>();
+        for (State s : nfa.getAllStates()) {
+            for (Object key : s.getTransitions().keySet()) {
+                if (key instanceof Character) {
+                    alphabet.add((Character) key);
+                } else if (key instanceof Range) {
+                    Range range = (Range) key;
+                    for (char c = range.getStart(); c <= range.getEnd(); c++) {
+                        alphabet.add(c);
+                    }
+                }
+            }
+        }
+        return alphabet;
     }
 
     public void printTransitionTable() {
-        System.out.println("DFA Transition Table:");
-        for (State state : allStates) {
-            System.out.println("State " + state.getId() + (acceptStates.contains(state) ? " (accept)" : ""));
-            Map<Character, State> transitions = state.getDeterministicTransitions();
-            for (Map.Entry<Character, State> entry : transitions.entrySet()) {
-                System.out.println("   " + entry.getKey() + " -> State " + entry.getValue().getId());
-            }
-        }
+        System.out.println("Transition Table:");
+        System.out.println("------------------------------------------------");
+        System.out.println("State    | Symbol             | Target State");
+        System.out.println("------------------------------------------------");
+        
+        allStates.stream()
+            .sorted(Comparator.comparingInt(DFAState::getId))
+            .forEach(state -> state.getTransitions().forEach((symbol, target) ->
+                System.out.printf("%-8d | %-18s | %-12d%n", 
+                    state.getId(), symbol, target.getId())));
+                    
+        System.out.println("------------------------------------------------");
     }
 
+    public static void main(String[] args) {
+        Map<String, String> patternMap = new LinkedHashMap<>();
+        patternMap.put("OPERATOR", "[+\\-*/%]");
+        patternMap.put("DECIMAL", "[+-]?(\\d+\\.\\d{1,5}|\\.\\d{1,5})([eE][+-]?\\d+)?");
+        patternMap.put("INTEGER", "[+-]?\\d+");
+        patternMap.put("IDENTIFIER", "[a-z]+");
+        patternMap.put("KEYWORD", "(global|local|tell|ask|is|now|true|false)");
+        patternMap.put("EXPONENT", "\\^");
+        patternMap.put("STRING_OR_CHAR", "\\{([^{}]*)\\}");
+        patternMap.put("SINGLE_LINE_COMMENT", "<[^>]*>");
+        patternMap.put("MULTI_LINE_COMMENT", "<<.*?>>");
+
+        patternMap.forEach((tokenType, pattern) -> {
+            System.out.println("=== Token: " + tokenType + " ===");
+            System.out.println("Pattern: " + pattern);
+            try {
+                DFA.fromNFA(NFA.fromRegex(pattern)).printTransitionTable();
+            } catch (Exception e) {
+                System.out.println("Error generating DFA for token: " + tokenType);
+                e.printStackTrace();
+            }
+            System.out.println();
+        });
+    }
 }

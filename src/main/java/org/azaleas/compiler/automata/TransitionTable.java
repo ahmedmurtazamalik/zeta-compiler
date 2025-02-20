@@ -6,7 +6,6 @@ public class TransitionTable {
 
 
     public TransitionTable(State startState) {
-        /* Initialize transition table */
         this.startState = startState;
     }
 
@@ -21,24 +20,24 @@ public class TransitionTable {
         table.append("------------------------------------------------\n");
 
         for (State state : allStates) {
-            Map<Object, State> transitions = state.getTransitions();
+            Map<Object, Set<State>> transitions = state.getTransitions();
 
             if (transitions.isEmpty()) {
                 table.append(String.format("%-8d | %-18s | %s%n",
                         state.getId(), "∅", "∅"));
             } else {
                 boolean isFirstTransition = true;
-                for (Map.Entry<Object, State> entry : transitions.entrySet()) {
-                    String symbol = formatSymbol(entry.getKey());
-                    String target = String.valueOf(entry.getValue().getId());
+                for (Map.Entry<Object, Set<State>> entry : transitions.entrySet()) {
+                    Object symbol = entry.getKey();
+                    Set<State> targetStates = entry.getValue();
 
                     if (isFirstTransition) {
                         table.append(String.format("%-8d | %-18s | %s%n",
-                                state.getId(), symbol, target));
+                                state.getId(), formatSymbol(symbol), targetStates));
                         isFirstTransition = false;
                     } else {
                         table.append(String.format("%-8s | %-18s | %s%n",
-                                "", symbol, target));
+                                "", formatSymbol(symbol), targetStates));
                     }
                 }
             }
@@ -67,10 +66,12 @@ public class TransitionTable {
         while (!queue.isEmpty()) {
             State current = queue.poll();
 
-            for (State neighbor : current.getTransitions().values()) {
-                if (!visited.contains(neighbor)) {
-                    visited.add(neighbor);
-                    queue.add(neighbor);
+            for (Set<State> neighbor : current.getTransitions().values()) {
+                for (State state : neighbor) {
+                    if (!visited.contains(state)) {
+                        queue.add(state);
+                        visited.add(state);
+                    }
                 }
             }
         }
