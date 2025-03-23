@@ -1,0 +1,7 @@
+<< This is a multi-line comment
+Testing the lexer >>
+global x is 42
+local y is 3.14
+< This is a single line comment >
+tell {Hello, World!}
+x is now x + y ^ 2

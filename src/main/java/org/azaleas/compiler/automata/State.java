@@ -40,7 +40,6 @@ class State {
         return id;
     }
 
-    // Returns the complete transition map.
     public Map<Object, Set<State>> getTransitions() {
         return transitions;
     }

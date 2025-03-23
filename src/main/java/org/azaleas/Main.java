@@ -3,7 +3,7 @@ package org.azaleas;
 import org.azaleas.compiler.errors.ErrorHandler;
 import org.azaleas.compiler.lexer.Lexer;
 import org.azaleas.compiler.lexer.Token;
-import org.azaleas.compiler.lexer.TokenType;
+
 
 import java.util.List;
 

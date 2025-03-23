@@ -3,9 +3,6 @@ package org.azaleas.compiler.automata;
 import java.util.*;
 
 public class NFA {
-    public State getStartState() {
-        return startState;
-    }
 
     // --- Internal epsilon symbol support ---
     static class Epsilon {
@@ -52,7 +49,7 @@ public class NFA {
         return new NFA(start, Set.of(accept), states);
     }
 
-    // --- Thompson's Construction Operators ---
+    // Thompson's Construction Operators - START
 
     // Union (alternation)
     public NFA union(NFA other) {
@@ -149,12 +146,10 @@ public class NFA {
 
     // --- Copying the NFA ---
     public NFA copy() {
-        // Create a mapping from old state to new state.
         Map<State, State> mapping = new HashMap<>();
         for (State s : allStates) {
             mapping.put(s, new State(s.isAccepting()));
         }
-        // Copy transitions.
         for (State s : allStates) {
             State newState = mapping.get(s);
             for (Map.Entry<Object, Set<State>> entry : s.getTransitions().entrySet()) {
@@ -172,6 +167,8 @@ public class NFA {
         }
         return new NFA(newStart, newAccept, new HashSet<>(mapping.values()));
     }
+
+    // Thompson's Construction Operators - END
 
     // --- Helper Methods for Simulation ---
 
@@ -246,12 +243,10 @@ public class NFA {
             }
         }
 
-        // Check if we ended in an accepting state
         return current.stream().anyMatch(State::isAccepting);
     }
 
     // --- Regex Parsing via Thompson's Construction ---
-
     private enum RegexTokenType {
         LITERAL, UNION, STAR, PLUS, QUESTION, LPAREN, RPAREN, CHAR_CLASS, CONCAT
     }
@@ -482,6 +477,16 @@ public class NFA {
         return buildFromPostfix(postfix);
     }
 
+    // Getters - START
+    Set<State> getAllStates() {
+        return allStates;
+    }
+
+    public State getStartState() {
+        return startState;
+    }
+    // Getters - END
+
     // --- Main for Testing / Transition Table Printing ---
     public static void main(String[] args) {
         Map<String, String> patternMap = new HashMap<>();
@@ -538,9 +543,5 @@ public class NFA {
                 e.printStackTrace();
             }
         }
-    }
-
-    Set<State> getAllStates() {
-        return allStates;
     }
 }
