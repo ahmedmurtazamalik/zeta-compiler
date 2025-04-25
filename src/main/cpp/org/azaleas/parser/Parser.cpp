@@ -6,9 +6,45 @@
 #include <set>
 #include <algorithm>
 #include <iomanip>
+#include <string> 
+#include <sstream> 
 
 
 using namespace std;
+
+// Helper function to tokenize a production string into symbols
+vector<string> tokenizeProduction(const string& prod) {
+    vector<string> tokens;
+    // Trim leading/trailing whitespace before tokenizing
+    string trimmedProd = prod;
+    size_t first = trimmedProd.find_first_not_of(" \t");
+    if (string::npos == first) return tokens; // Empty or whitespace only
+    size_t last = trimmedProd.find_last_not_of(" \t");
+    trimmedProd = trimmedProd.substr(first, (last - first + 1));
+
+    istringstream iss(trimmedProd);
+    string token;
+    while (iss >> token) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
+// Helper function to join tokens back into a string
+string joinTokens(const vector<string>& tokens, size_t start = 0, size_t end = string::npos) {
+    string result = "";
+    if (end == string::npos) {
+        end = tokens.size();
+    }
+    for (size_t i = start; i < end; ++i) {
+        if (i > start) {
+            result += " ";
+        }
+        result += tokens[i];
+    }
+    return result;
+}
+
 
 // class to assist in console output redirection to file
 class TeeBuf : public streambuf {
@@ -132,110 +168,131 @@ public:
             map<string, vector<string>> new_cfg;
 
             // Iterate over the CFG
-            for (auto& rule : cfg) {
-                string lhs = rule.first;
-                vector<string> productions = rule.second;
+            for (auto const& [lhs, productions] : cfg) { // Use structured binding
+                vector<string> currentProductions = productions; // Work on a copy
 
-                // remove all leading and trailing whitespaces from  the productions
-                for (auto& prod : productions) {
-                    if (prod.find_first_not_of(" \t") != string::npos) {
-                        prod.erase(0, prod.find_first_not_of(" \t"));
-                        prod.erase(prod.find_last_not_of(" \t") + 1);
-                    }
-                }
-
-                // Continue factoring until no more changes can be made
+                // Continue factoring until no more changes can be made for this non-terminal
                 bool localChanged = true;
-                // Iterate until productions remain and there was a change made
-                while (localChanged && productions.size() > 1) {
+                while (localChanged && currentProductions.size() > 1) {
                     localChanged = false;
 
-                    // finding longest common prefix among the productions
-                    for (size_t i = 0; i < productions.size(); i++) {
-                        // Indexes of production with common prefixes
-                        vector<size_t> commonGroup;
-                        string longestPrefix;
+                    // finding longest common prefix among the productions (TOKEN BASED)
+                    for (size_t i = 0; i < currentProductions.size(); ++i) {
+                        vector<string> tokens_i = tokenizeProduction(currentProductions[i]);
+                        if (tokens_i.empty()) continue; // Skip empty productions
 
-                        // Compare current production with others to find common prefixes
-                        for (size_t j = i + 1; j < productions.size(); j++) {
-                            size_t minLen = min(productions[i].length(), productions[j].length());
-                            size_t k = 0;
+                        vector<size_t> commonGroupIndices; // Indices of productions sharing the longest prefix with prod i
+                        vector<string> longestPrefixTokens; // The longest common token prefix found so far for prod i
 
-                            // getting the length of the common prefix
-                            while (k < minLen && productions[i][k] == productions[j][k]) k++;
+                        // Compare current production (i) with subsequent productions (j)
+                        for (size_t j = i + 1; j < currentProductions.size(); ++j) {
+                            vector<string> tokens_j = tokenizeProduction(currentProductions[j]);
+                            if (tokens_j.empty()) continue;
 
-                            // get the prefix in a string
-                            string prefix = productions[i].substr(0, k);
+                            size_t k = 0; // Length of current common token prefix
+                            while (k < tokens_i.size() && k < tokens_j.size() && tokens_i[k] == tokens_j[k]) {
+                                k++;
+                            }
 
-                            // validation for empty prefixes or whitespace prefixes
-                            // this eliminates meaningless prefixes
-                            if (!prefix.empty() && prefix.find_first_not_of(" \t") != string::npos && k > 0) {
-                                if (longestPrefix.empty() || prefix.length() >= longestPrefix.length()) {
-                                    // Update longest prefix and group
-                                    if (prefix.length() > longestPrefix.length()) {
-                                        commonGroup.clear();
-                                        longestPrefix = prefix;
+                            // Check if this common prefix is longer than the current longestPrefixTokens
+                            if (k > 0 && k >= longestPrefixTokens.size()) {
+                                vector<string> currentPrefixTokens(tokens_i.begin(), tokens_i.begin() + k);
+
+                                // If strictly longer, reset the group
+                                if (k > longestPrefixTokens.size()) {
+                                    longestPrefixTokens = currentPrefixTokens;
+                                    commonGroupIndices.clear();
+                                    commonGroupIndices.push_back(j); // Add j to the new group
+                                }
+                                // If equal length, add j to the existing group
+                                else if (k == longestPrefixTokens.size()) {
+                                     // Only add if the prefix actually matches the current longest
+                                    bool prefixMatches = true;
+                                    for(size_t p=0; p<k; ++p) {
+                                        if (tokens_i[p] != longestPrefixTokens[p]) {
+                                            prefixMatches = false;
+                                            break;
+                                        }
                                     }
-                                    commonGroup.push_back(j);
+                                    if (prefixMatches) {
+                                        commonGroupIndices.push_back(j);
+                                    }
                                 }
                             }
-                        }
+                        } // End comparison loop (j)
 
-                        // factoring out the meaningful common prefix
-                        if (!longestPrefix.empty() && !commonGroup.empty()) {
-                            // update flags to reflect changes in the grammar
-                            localChanged = changed = true;
+                        // If a common prefix was found for production i and at least one other production
+                        if (!longestPrefixTokens.empty() && !commonGroupIndices.empty()) {
+                            localChanged = changed = true; // Mark that changes were made
+
                             string newNonTerminal = lhs + "_" + to_string(++newSymbolCount);
-                            vector<string> suffixes;
+                            string prefixStr = joinTokens(longestPrefixTokens);
 
-                            // Extract suffixes from factored productions
-                            string suffix_i = productions[i].substr(longestPrefix.length());
-                            if (suffix_i.empty()) suffix_i = "ε";
+                            vector<string> newNonTerminalProductions; // Productions for the new non-terminal S'
+                            vector<string> remainingProductions; // Productions that didn't share the prefix
 
-                            suffixes.push_back(suffix_i);
+                            // Process the original production 'i' which started the group
+                            vector<string> suffix_i_tokens(tokens_i.begin() + longestPrefixTokens.size(), tokens_i.end());
+                            string suffix_i_str = joinTokens(suffix_i_tokens);
+                            if (suffix_i_str.empty()) suffix_i_str = "ε"; // Use epsilon if suffix is empty
+                            newNonTerminalProductions.push_back(suffix_i_str);
 
-                            // keeping track of what productions to remove
-                            vector<bool> toRemove(productions.size(), false);
-                            toRemove[i] = true;
-
-                            // Process all grouped productions
-                            for (size_t idx : commonGroup) {
-                                string suffix = productions[idx].substr(longestPrefix.length());
-
-                                if (suffix.empty()) suffix = "ε";
-
-                                suffixes.push_back(suffix);
-                                toRemove[idx] = true;
+                            // Keep track of indices processed in this factoring step
+                            set<size_t> processedIndices;
+                            processedIndices.insert(i);
+                            for (size_t idx : commonGroupIndices) {
+                                processedIndices.insert(idx);
                             }
 
-                            // Making new productions
-                            vector<string> new_prods;
-
-                            // adding the common productions
-                            new_prods.push_back(longestPrefix + newNonTerminal);
-
-                            // add the non-common productions
-                            for (size_t k = 0; k < productions.size(); k++) {
-                                if (!toRemove[k]) { new_prods.push_back(productions[k]); }
+                            // Process productions in the common group (found in commonGroupIndices)
+                            for (size_t idx : commonGroupIndices) {
+                                vector<string> tokens_idx = tokenizeProduction(currentProductions[idx]);
+                                vector<string> suffix_idx_tokens(tokens_idx.begin() + longestPrefixTokens.size(), tokens_idx.end());
+                                string suffix_idx_str = joinTokens(suffix_idx_tokens);
+                                if (suffix_idx_str.empty()) suffix_idx_str = "ε";
+                                newNonTerminalProductions.push_back(suffix_idx_str);
                             }
 
-                            // update the cfg with new rules
-                            new_cfg[newNonTerminal] = suffixes;
-                            productions = new_prods;
+                            // Add the new factored production for the original non-terminal
+                            remainingProductions.push_back(prefixStr + " " + newNonTerminal);
 
-                            // restart checking
-                            break;
+                            // Add back any productions that were not part of this factoring group
+                            for (size_t k = 0; k < currentProductions.size(); ++k) {
+                                if (processedIndices.find(k) == processedIndices.end()) {
+                                    remainingProductions.push_back(currentProductions[k]);
+                                }
+                            }
+
+                            // Update the productions for the current non-terminal
+                            currentProductions = remainingProductions;
+                            // Add the new rule for the newly created non-terminal
+                            new_cfg[newNonTerminal] = newNonTerminalProductions;
+
+                            // Restart the check for the current non-terminal since its productions changed
+                            goto next_iteration_for_lhs; // Use goto for clarity in restarting the outer loop check
                         }
-                    }
-                }
+                    } // End production loop (i)
 
-                // update current non-terminal's productions
-                new_cfg[lhs] = productions;
-            }
+                    next_iteration_for_lhs:; // Label for restarting the check for the current lhs
+                } // End while(localChanged)
+
+                // Add the final set of productions for this non-terminal to the new grammar
+                // Only add if it wasn't added during factoring (e.g., new non-terminals)
+                 if (new_cfg.find(lhs) == new_cfg.end()) {
+                    new_cfg[lhs] = currentProductions;
+                 } else {
+                    // If lhs was already added (e.g. as a new non-terminal name), merge productions carefully
+                    // This case should ideally not happen with unique naming, but handle defensively
+                    vector<string>& existingProds = new_cfg[lhs];
+                    existingProds.insert(existingProds.end(), currentProductions.begin(), currentProductions.end());
+                 }
+
+
+            } // End CFG iteration
 
             // replace old cfg with new left factored updated cfg
             cfg = new_cfg;
-        }
+        } // End while(changed)
 
         // success
         return 1;
@@ -355,11 +412,13 @@ public:
         for (const string& nonTerm : nonTerminals) {
             first[nonTerm] = {};
         }
-
-        // For all terminals a, First(a) = {a}
+        // Initialize first sets for terminals as well, needed for computeFirstOfProduction
         for (const string& term : terminals) {
-            first[term].insert(term);
+            first[term] = {term};
         }
+        // Add epsilon explicitly if needed later
+        first["ε"] = {"ε"};
+
 
         bool changed = true;
         // iterate until no changes in an iteration
@@ -371,28 +430,35 @@ public:
                 string lhs = rule.first;
 
                 // iterate over each production of a rule
-                for (const string& prod : rule.second) {
-                    // add epislons in first sets
-                    if (prod == "ε") {
-                        if (first[lhs].insert("ε").second) changed = true;
-                        continue;
+                for (const string& prodStr : rule.second) {
+                    vector<string> prod = tokenizeProduction(prodStr); // Tokenize production
+
+                    // Handle direct epsilon production: X -> ε
+                    if (prod.empty() || (prod.size() == 1 && prod[0] == "ε")) {
+                         if (first[lhs].insert("ε").second) changed = true;
+                         continue;
                     }
 
 
-                    istringstream iss(prod);
-                    string symbol;
-                    vector<string> symbols;
-
-                    // get string symbols (non-terminals and terminals both) from the production
-                    while (iss >> symbol) {
-                        symbols.push_back(symbol);
-                    }
-
-                    // compute First for this production
+                    // compute First for this production X -> Y1 Y2 ... Yk
                     // flag to track if all symbols in production can derive ε
                     bool allDeriveEpsilon = true;
 
-                    for (const auto & symbol : symbols) {
+                    for (const auto & symbol : prod) {
+                        // Ensure the symbol exists in the first map (could be terminal or non-terminal)
+                        if (first.find(symbol) == first.end()) {
+                             // This case should ideally not happen if initializeSymbols is correct
+                             // If it's a terminal not seen before, its first set is itself
+                             if (terminals.count(symbol)) {
+                                first[symbol] = {symbol};
+                             } else {
+                                // Or handle as an error / unknown symbol
+                                cerr << "Warning: Symbol '" << symbol << "' in production '" << prodStr << "' not found in FIRST sets." << endl;
+                                allDeriveEpsilon = false; // Cannot proceed if symbol is unknown
+                                break;
+                             }
+                        }
+
                         // flag to track if current symbol derives an epsilon
                         bool currDerivedEpsilon = false;
 
@@ -413,7 +479,7 @@ public:
                     }
 
                     // If all symbols of the production can derive epsilon, add epsilon to First(lhs)
-                    if (allDeriveEpsilon && !symbols.empty()) {
+                    if (allDeriveEpsilon) {
                         if (first[lhs].insert("ε").second) changed = true;
                     }
                 }
@@ -424,66 +490,80 @@ public:
     }
 
 
-    // Helper function to compute First of a production
-    bool computeFirstOfProduction(const string& prod, set<string>& firstSet) {
-        // If production is epsilon, First includes epsilon
-        if (prod == "ε") {
-            firstSet.insert("ε");
-            return true;
-        }
-
-        // Split the production into symbols
-        istringstream iss(prod);
-        string symbol;
-        vector<string> symbols;
-
-        while (iss >> symbol) symbols.push_back(symbol);
-
-        if (symbols.empty()) return false;
-
-        // Compute First for this production
+    // Helper function to compute First of a sequence of symbols (production RHS)
+    // Returns true if the sequence can derive epsilon, false otherwise.
+    // Populates firstSet with the First set of the sequence.
+    bool computeFirstOfSequence(const vector<string>& symbols, set<string>& firstSet) {
+        firstSet.clear();
         bool allDeriveEpsilon = true;
 
+        if (symbols.empty() || (symbols.size() == 1 && symbols[0] == "ε")) {
+             firstSet.insert("ε");
+             return true; // Epsilon sequence derives epsilon
+        }
+
+
         for (const auto & symbol : symbols) {
+            // Ensure the symbol exists in the first map
+            if (first.find(symbol) == first.end()) {
+                 if (terminals.count(symbol)) {
+                    first[symbol] = {symbol}; // Handle terminals on the fly if missed
+                 } else {
+                    cerr << "Warning: Symbol '" << symbol << "' not found in FIRST sets during FirstOfSequence calculation." << endl;
+                    allDeriveEpsilon = false;
+                    break;
+                 }
+            }
+
             bool currDerivedEpsilon = false;
-
-            // For terminals, First(a) = {a}
-            if (nonTerminals.find(symbol) == nonTerminals.end() && symbol != "ε") {
-                firstSet.insert(symbol);
-                allDeriveEpsilon = false;
-                break;
-            }
-
-            // For non-terminals, use the precomputed First set
             for (const string& elem : first[symbol]) {
-                if (elem == "ε") currDerivedEpsilon = true;
-                else firstSet.insert(elem);
+                if (elem == "ε") {
+                    currDerivedEpsilon = true;
+                } else {
+                    firstSet.insert(elem);
+                }
             }
 
-            // If this symbol cannot derive epsilon, stop here
             if (!currDerivedEpsilon) {
                 allDeriveEpsilon = false;
-                break;
+                break; // Stop if a symbol doesn't derive epsilon
             }
         }
 
-        return allDeriveEpsilon;
+        // If all symbols derived epsilon, add epsilon to the result set
+        if (allDeriveEpsilon) {
+            firstSet.insert("ε");
+        }
+
+        return allDeriveEpsilon; // Return whether the whole sequence can derive epsilon
     }
 
 
-    // function to make FIRST set for all non-terminals
+    // function to make FOLLOW set for all non-terminals
     int computeFollow() {
 
-        // in case someone tries to make follow before first lol
-        if (first.empty()) computeFirst();
+        // Ensure FIRST sets are computed
+        if (first.empty()) {
+            computeFirst();
+        }
+         // Ensure symbols are initialized
+        if (nonTerminals.empty() || terminals.empty()) {
+            initializeSymbols();
+        }
+
 
         // initialize Follow sets
         follow.clear();
         for (const string& nonTerm : nonTerminals) follow[nonTerm] = {};
 
-        // Add $ to Follow of start symbol
+        // Rule 1: Add $ to Follow of start symbol (assuming first key in cfg is start symbol)
         string startSymbol = cfg.begin()->first;
-        follow[startSymbol].insert("$");
+        if (!startSymbol.empty()) {
+            follow[startSymbol].insert("$");
+        } else {
+             cerr << "Error: Cannot determine start symbol." << endl;
+             return 0; // Cannot proceed without a start symbol
+        }
 
 
         bool changed = true;
@@ -491,59 +571,44 @@ public:
         while (changed) {
             changed = false;
 
-            // Iterate over rules in the CFG
+            // Iterate over rules in the CFG: A -> α
             for (const auto& rule : cfg) {
-                string lhs = rule.first;
+                string lhs_A = rule.first;
 
 
-                for (const string& prod : rule.second) {
-                    // Skip epsilon productions
-                    if (prod == "ε") continue;
+                for (const string& prodStr : rule.second) {
+                    vector<string> prod = tokenizeProduction(prodStr); // Tokenize production α
 
-                    istringstream iss(prod);
-                    string token;
-                    vector<string> symbols;
+                    // Iterate over each symbol B in the production α
+                    for (size_t i = 0; i < prod.size(); ++i) {
+                        string symbol_B = prod[i];
 
-                    // get non-terminals and terminals as string symbols
-                    while (iss >> token) symbols.push_back(token);
+                        // We only compute Follow for non-terminals
+                        if (nonTerminals.find(symbol_B) == nonTerminals.end()) continue;
 
-                    // iterate over each symbol in the production
-                    for (size_t i = 0; i < symbols.size(); i++) {
-                        // skip terminals
-                        if (nonTerminals.find(symbols[i]) == nonTerminals.end()) continue;
+                        // Consider the part of the production after B: β
+                        // Create a vector for β (symbols from i+1 to end)
+                        vector<string> beta_sequence;
+                        if (i + 1 < prod.size()) {
+                            beta_sequence.assign(prod.begin() + i + 1, prod.end());
+                        }
 
-                        // Compute First of the rest of the production
-                        bool restDerivedEpsilon = true;
-                        // symbol has something after it
-                        if (i < symbols.size() - 1) {
-                            for (size_t j = i + 1; j < symbols.size(); j++) {
-                                bool currDerivedEpsilon = false;
+                        // Rule 2: A -> α B β
+                        // Add First(β) - {ε} to Follow(B)
+                        set<string> firstOfBeta;
+                        bool betaDerivesEpsilon = computeFirstOfSequence(beta_sequence, firstOfBeta); // Use helper
 
-                                // Add all elements of FIRST(symbols[j]) except ε to FOLLOW(symbols[i])
-                                for (const string& elem : first[symbols[j]]) {
-                                    if (elem == "ε") {
-                                        // Mark that current symbol can derive ε
-                                        currDerivedEpsilon = true;
-                                    }
-                                    else {
-                                        // insert element into FOLLOW(symbols[i]) and mark a change was made
-                                        if (follow[symbols[i]].insert(elem).second) changed = true;
-                                    }
-                                }
-
-                                // if current symbol cannot derive epsilon, stop processing more symbols
-                                if (!currDerivedEpsilon) {
-                                    restDerivedEpsilon = false;
-                                    break;
-                                }
+                        for (const string& term : firstOfBeta) {
+                            if (term != "ε") {
+                                if (follow[symbol_B].insert(term).second) changed = true;
                             }
                         }
 
-                        // if symbol is at the end or all symbols after it can derive epsilon
-                        // add Follow(A) to Follow(B)
-                        if (i == symbols.size() - 1 || restDerivedEpsilon) {
-                            for (const string& elem : follow[lhs]) {
-                                if (follow[symbols[i]].insert(elem).second) changed = true;
+                        // Rule 3: A -> α B or A -> α B β where First(β) contains ε
+                        // Add Follow(A) to Follow(B)
+                        if (beta_sequence.empty() || betaDerivesEpsilon) {
+                            for (const string& term : follow[lhs_A]) {
+                                if (follow[symbol_B].insert(term).second) changed = true;
                             }
                         }
                     }
@@ -558,91 +623,115 @@ public:
     void printFirstAndFollow() {
         cout << "\nFirst Sets:" << endl;
         // iterate over all non-terminals and print items of each non-terminal's first set
-        for (const auto& nonTerm : nonTerminals) {
-            cout << "First(" << nonTerm << ") = { ";
-            for (const auto& term : first[nonTerm]) cout << term << ", ";
-            cout << "}" << endl;
+        // Sort non-terminals for consistent output
+        vector<string> sortedNonTerminals(nonTerminals.begin(), nonTerminals.end());
+        sort(sortedNonTerminals.begin(), sortedNonTerminals.end());
+
+        for (const auto& nonTerm : sortedNonTerminals) {
+            cout << "First(" << left << setw(max(10, (int)nonTerm.length())) << nonTerm << ") = { ";
+            // Sort terminals within the set for consistent output
+            set<string>& fSet = first[nonTerm];
+            vector<string> sortedFirst(fSet.begin(), fSet.end());
+            sort(sortedFirst.begin(), sortedFirst.end());
+            string sep = "";
+            for (const auto& term : sortedFirst) {
+                 cout << sep << term;
+                 sep = ", ";
+            }
+            cout << " }" << endl;
         }
 
 
         cout << "\nFollow Sets:" << endl;
         // iterate over all non-terminals and print items of each non-terminal's follow set
-        for (const auto& nonTerm : nonTerminals) {
-            cout << "Follow(" << nonTerm << ") = { ";
-            for (const auto& term : follow[nonTerm]) cout << term << ", ";
-            cout << "}" << endl;
+        for (const auto& nonTerm : sortedNonTerminals) {
+            cout << "Follow(" << left << setw(max(10, (int)nonTerm.length())) << nonTerm << ") = { ";
+             // Sort terminals within the set for consistent output
+            set<string>& flSet = follow[nonTerm];
+            vector<string> sortedFollow(flSet.begin(), flSet.end());
+            sort(sortedFollow.begin(), sortedFollow.end());
+            string sep = "";
+            for (const auto& term : sortedFollow) {
+                cout << sep << term;
+                sep = ", ";
+            }
+            cout << " }" << endl;
         }
     }
 
     int computeParsingTable() {
         // Make sure First and Follow sets are computed
-        if (first.empty() || follow.empty()) {
-            computeFirst();
-            computeFollow();
-        }
+        if (first.empty()) computeFirst();
+        if (follow.empty()) computeFollow();
+
 
         // Clear the existing parsing table
         parsingTable.clear();
 
-        // Add $ as a terminal for end of input
+        // Add $ as a terminal for end of input if not already present
         terminals.insert("$");
 
-        // Iterative over rules in the cfg
+        // Iterative over rules in the cfg: A -> α
         for (const auto& rule : cfg) {
-            string nonTerm = rule.first;
+            string nonTerm_A = rule.first;
 
-            for (const string& prod : rule.second) {
+            for (const string& prodStr : rule.second) { // α
+                 vector<string> prod_alpha = tokenizeProduction(prodStr);
 
-                // skip empty productions
-                if (prod.empty()) continue;
-
-                // extract FIRST set for the right-hand side (RHS) of the production
-                set<string> firstOfRHS;
-                bool derivesEpsilon = computeFirstOfProduction(prod, firstOfRHS);
+                // Compute FIRST(α)
+                set<string> firstOfAlpha;
+                bool alphaDerivesEpsilon = computeFirstOfSequence(prod_alpha, firstOfAlpha);
 
 
-                // Step 1: Populate parsing table for FIRST(α)
-                // If a terminal 'a' is in FIRST(α), add A → α to M[A, a]
-                for (const string& term : firstOfRHS) {
-                    // skip epislon, they will be handled by follows
-                    if (term != "ε") {
-                        pair<string, string> tableKey = make_pair(nonTerm, term);
+                // Rule 1: For each terminal 'a' in FIRST(α), add A -> α to M[A, a]
+                for (const string& term_a : firstOfAlpha) {
+                    if (term_a != "ε") {
+                        pair<string, string> tableKey = make_pair(nonTerm_A, term_a);
 
-                        // c    heck for conflicts (non-LL(1) grammar)
-                        if (parsingTable.find(tableKey) != parsingTable.end()) {
-                            cout << "Grammar is not LL(1): Conflict at [" << nonTerm
-                                << ", " << term << "] between \""
-                                << parsingTable[tableKey] << "\" and \""
-                                << prod << "\"" << endl;
+                        // Check for conflicts (non-LL(1) grammar)
+                        if (parsingTable.find(tableKey) != parsingTable.end() && parsingTable[tableKey] != prodStr) {
+                            cerr << "\nLL(1) Conflict Detected!" << endl;
+                            cerr << "  At Table[" << nonTerm_A << ", " << term_a << "]:" << endl;
+                            cerr << "  Existing production: " << nonTerm_A << " -> " << parsingTable[tableKey] << endl;
+                            cerr << "  New production:      " << nonTerm_A << " -> " << prodStr << endl;
+                            cerr << "  FIRST(" << prodStr << ") = {";
+                            for(const auto& f : firstOfAlpha) cerr << f << ","; cerr << "}" << endl;
+                            cerr << "  FOLLOW(" << nonTerm_A << ") = {";
+                            for(const auto& f : follow[nonTerm_A]) cerr << f << ","; cerr << "}" << endl;
+                            // Optionally return an error code or throw exception
                         }
 
-                        // if not epsilon and not conflict, add the production to the parsing table
-                        parsingTable[tableKey] = prod;
+                        // Add the original string production to the parsing table
+                        parsingTable[tableKey] = prodStr;
                     }
                 }
 
-                // Step 2: Populate parsing table for FOLLOW(A) if ε is in FIRST(α)
-                // If α can derive ε, add A → α to M[A, b] for all b in FOLLOW(A)
-                if (derivesEpsilon || firstOfRHS.find("ε") != firstOfRHS.end()) {
-                    for (const string& b : follow[nonTerm]) {
-                        pair<string, string> tableKey = make_pair(nonTerm, b);
+                // Rule 2: If ε is in FIRST(α), then for each terminal 'b' in FOLLOW(A), add A -> α to M[A, b]
+                if (alphaDerivesEpsilon) { // Check if the whole sequence α can derive ε
+                    for (const string& term_b : follow[nonTerm_A]) { // term_b includes '$' if applicable
+                        pair<string, string> tableKey = make_pair(nonTerm_A, term_b);
 
-                        // check for conflicts
-                        if (parsingTable.find(tableKey) != parsingTable.end()) {
-                            cout << "Grammar is not LL(1): Conflict at [" << nonTerm
-                                << ", " << b << "] between \""
-                                << parsingTable[tableKey] << "\" and \""
-                                << prod << "\"" << endl;
+                        // Check for conflicts
+                         if (parsingTable.find(tableKey) != parsingTable.end() && parsingTable[tableKey] != prodStr) {
+                            cerr << "\nLL(1) Conflict Detected (Epsilon Rule)!" << endl;
+                            cerr << "  At Table[" << nonTerm_A << ", " << term_b << "]:" << endl;
+                            cerr << "  Existing production: " << nonTerm_A << " -> " << parsingTable[tableKey] << endl;
+                            cerr << "  New production:      " << nonTerm_A << " -> " << prodStr << " (due to FOLLOW set)" << endl;
+                             cerr << "  FIRST(" << prodStr << ") = {";
+                            for(const auto& f : firstOfAlpha) cerr << f << ","; cerr << "}" << endl;
+                            cerr << "  FOLLOW(" << nonTerm_A << ") = {";
+                            for(const auto& f : follow[nonTerm_A]) cerr << f << ","; cerr << "}" << endl;
+                            // Optionally return an error code or throw exception
                         }
 
-                        // if not conflict, add the production to the parsing table
-                        parsingTable[tableKey] = prod;
+                        // Add the original string production to the parsing table
+                        parsingTable[tableKey] = prodStr;
                     }
                 }
             }
         }
 
-        return 1;
+        return 1; // Indicate success (though conflicts might have been printed)
     }
 
     void printParsingTable() {
