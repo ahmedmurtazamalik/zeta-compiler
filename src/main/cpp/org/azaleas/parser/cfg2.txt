@@ -1,0 +1,10 @@
+P -> <StmtList>
+<StmtList> -> <Stmt> <StmtList> | #
+<Stmt> -> <Decl> | <Assign> | <IfStmt>
+<Decl> -> int <Var> ;
+<Assign> -> <Var> = <Expr> ;
+<IfStmt> -> if ( <Expr> ) { <StmtList> }
+<Expr> -> <Expr> + <Term> | <Expr> - <Term> | <Term>
+<Term> -> <Var> | <Num>
+<Var> -> x
+<Num> -> 0 | 1 | 2 | 3 | 4 | 5
