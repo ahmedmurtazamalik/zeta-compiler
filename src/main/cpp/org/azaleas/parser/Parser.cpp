@@ -6,8 +6,8 @@
 #include <set>
 #include <algorithm>
 #include <iomanip>
-#include <string> 
-#include <sstream> 
+#include <string>
+#include <sstream>
 
 
 using namespace std;
@@ -556,13 +556,21 @@ public:
         follow.clear();
         for (const string& nonTerm : nonTerminals) follow[nonTerm] = {};
 
-        // Rule 1: Add $ to Follow of start symbol (assuming first key in cfg is start symbol)
-        string startSymbol = cfg.begin()->first;
-        if (!startSymbol.empty()) {
+        // Rule 1: Add $ to Follow of the designated start symbol
+        // *** MODIFIED: Explicitly use "P" as the start symbol for this grammar ***
+        string startSymbol = "P";
+        if (nonTerminals.count(startSymbol)) { // Check if P exists
             follow[startSymbol].insert("$");
         } else {
-             cerr << "Error: Cannot determine start symbol." << endl;
-             return 0; // Cannot proceed without a start symbol
+             // Fallback or error if P is not found (should not happen with the given grammar)
+             string firstKey = cfg.begin()->first;
+             if (!firstKey.empty()) {
+                 follow[firstKey].insert("$");
+                 cerr << "Warning: Explicit start symbol 'P' not found. Using first rule's LHS: '" << firstKey << "' as start symbol." << endl;
+             } else {
+                 cerr << "Error: Cannot determine start symbol." << endl;
+                 return 0; // Cannot proceed without a start symbol
+             }
         }
 
 

@@ -301,7 +301,7 @@ int main() {
     while (fgets(line, sizeof(line), input_file)) {
         line[strcspn(line, "\n")] = '\0'; // Remove newline
         if (strlen(line) > 0) {
-            parse_input(line, "S"); // Assuming start symbol is 'E'
+            parse_input(line, "P"); // Assuming start symbol is 'E'
         }
     }
 
