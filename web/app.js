@@ -8,7 +8,7 @@ const EXAMPLES = [
         id: 'hello',
         title: 'Hello World',
         desc: 'Simple greetings print statement',
-        code: `-- Simple Zeta Greeting
+        code: `< Simple Zeta Greeting >
 tell {Hello, World!}
 `
     },
@@ -16,7 +16,7 @@ tell {Hello, World!}
         id: 'circle-area',
         title: 'Circle Area Calculator',
         desc: 'Computes circle area using variables & math exponents',
-        code: `-- Calculates the area of a circle
+        code: `< Calculates the area of a circle >
 global pi is 3.14
 local radius is 5
 local area is pi * radius ^ 2
@@ -29,7 +29,7 @@ tell {The calculated area is: } area
         id: 'user-input',
         title: 'User Interactivity',
         desc: 'Demonstrates console reading (ask) & responses',
-        code: `-- Ask for user details
+        code: `< Ask for user details >
 local name is {Anonymous}
 local age is 0
 
@@ -46,7 +46,7 @@ tell {Hello, } name {. You are } age { years old.}
         id: 'variables-scope',
         title: 'Variables Scoping',
         desc: 'Illustrates global/local keywords and mutations',
-        code: `-- Demonstrates scope boundary mutability
+        code: `< Demonstrates scope boundary mutability >
 global max is 100
 local count is 0
 
@@ -61,7 +61,7 @@ tell {Count is now: } count
         id: 'precedence',
         title: 'Operator Precedence',
         desc: 'Shows mathematical operators and parenthetical precedence',
-        code: `-- Math equations evaluating precedence
+        code: `< Math equations evaluating precedence >
 local a is 2
 local b is 3
 local c is 4
