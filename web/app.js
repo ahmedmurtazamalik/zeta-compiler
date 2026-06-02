@@ -76,6 +76,89 @@ tell {(a + b) * c = } expr2
 tell {a ^ b ^ 2 = } expr3
 tell {10 / 3 + 10 % 3 = } expr4
 `
+    },
+    {
+        id: 'showcase',
+        title: 'Language Showcase',
+        desc: 'Full language demonstration with physics and compound interest solvers',
+        code: `<< -------------------------------------------------------------
+   Zeta Programming Language: Comprehensive Showcase Script
+   -------------------------------------------------------------
+   This script demonstrates the syntax, type system, operator
+   precedence, scopes, and input/output capabilities of Zeta.
+   ------------------------------------------------------------- >>
+
+< Global physics and economic constants >
+global gravity is 9.81
+global initial_investment is 1000.00
+global interest_rate is 0.05
+global compound_periods is 12
+
+< Output a welcoming header to the terminal console >
+tell {==================================================}
+tell {       ZETA COMPILER & INTERPRETER SHOWCASE       }
+tell {==================================================}
+tell {Running client-side JVM compile evaluation...}
+
+< 1. Physics Section: Projectile Motion Calculator >
+tell {}
+tell {--- SECTION 1: PROJECTILE MOTION CALCULATOR ---}
+local time is 3.5
+local velocity is 45.0
+local launch_angle_sin is 0.5
+local launch_angle_cos is 0.866
+
+< Compute horizontal and vertical displacement >
+local horizontal_distance is velocity * launch_angle_cos * time
+local vertical_height is (velocity * launch_angle_sin * time) - (0.5 * gravity * time ^ 2)
+
+tell {Calculating trajectories for } time { seconds of flight...}
+tell {Horizontal Displacement: } horizontal_distance { meters}
+tell {Vertical Height achieved:   } vertical_height { meters}
+
+< 2. Economics Section: Compound Interest Estimator >
+tell {}
+tell {--- SECTION 2: COMPOUND INTEREST ESTIMATOR ---}
+local years is 5
+local compound_exponent is compound_periods * years
+local rate_ratio is interest_rate / compound_periods
+local interest_multiplier is (1.0 + rate_ratio) ^ compound_exponent
+local final_balance is initial_investment * interest_multiplier
+
+tell {Principal Investment: $} initial_investment
+tell {Compounding at } interest_rate { interest over } years { years...}
+tell {Estimated Final Balance: $} final_balance
+
+< Mutate the timeline to showcase "is now" re-assignment >
+years is now years + 5
+compound_exponent is now compound_periods * years
+interest_multiplier is now (1.0 + rate_ratio) ^ compound_exponent
+final_balance is now initial_investment * interest_multiplier
+
+tell {Extending compounding horizon to } years { years...}
+tell {New Estimated Final Balance: $} final_balance
+
+< 3. Interactive User Input Section >
+tell {}
+tell {--- SECTION 3: INTERACTIVE USER DIAGNOSTICS ---}
+local user_name is {Developer}
+local user_score is 100
+
+tell {Please register your name in the input terminal below:}
+ask user_name
+
+tell {Enter your diagnostic level (INT value):}
+ask user_score
+
+local score_multiplier is 1.5
+local final_score is user_score * score_multiplier
+
+tell {==================================================}
+tell {Showcase verification completed for: } user_name
+tell {Diagnostic Score adjusted to: } final_score
+tell {System status: compiler online & operating.}
+tell {==================================================}
+`
     }
 ];
 
@@ -281,7 +364,7 @@ async function executeCompiler() {
         
         const startTime = performance.now();
         // Invoke local relative /zeta.jar binary
-        const exitCode = await cheerpjRunJar('/app/zeta.jar?v=3', '/str/program.zeta');
+        const exitCode = await cheerpjRunJar('/app/zeta.jar?v=4', '/str/program.zeta');
         const endTime = performance.now();
         
         const elapsed = ((endTime - startTime) / 1000).toFixed(2);
