@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zeta Interactive Playground & IDE</title>
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Styled CSS -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- CheerpJ WebAssembly JVM Loader -->
+    <script src="https://cjrtnc.leaningtech.com/4.3/loader.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Brand Header Bar -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="logo-orb">ζ</div>
+                <div class="branding">
+                    <h1>Zeta <span>Playground</span></h1>
+                    <p>English-like educational programming language compiled client-side in WebAssembly</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="theme-toggle" class="btn btn-secondary" title="Toggle Light/Dark Theme">
+                    <span class="icon">☀</span>
+                </button>
+                <button id="btn-share" class="btn btn-secondary" title="Share current code via URL link">
+                    <span class="icon">🔗</span> Share Code
+                </button>
+                <button id="btn-run" class="btn btn-primary" disabled>
+                    <span class="icon spin-ready" id="run-icon">▶</span> <span id="run-text">Loading Compiler...</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace split -->
+        <main class="app-workspace">
+            <!-- Sidebar: Example templates & Documentation -->
+            <aside class="sidebar">
+                <div class="sidebar-tabs">
+                    <button class="sidebar-tab active" id="tab-btn-examples">Templates</button>
+                    <button class="sidebar-tab" id="tab-btn-docs">Language Docs</button>
+                </div>
+                <div class="sidebar-content">
+                    <nav class="examples-list" id="examples-menu">
+                        <!-- Loaded dynamically via app.js -->
+                    </nav>
+                    <div class="docs-container" id="docs-content" style="display: none;">
+                        <div class="doc-section">
+                            <h4>Variables</h4>
+                            <p>Declare with <code>global</code> (constant) or <code>local</code> (mutable), and reassign with <code>is now</code>:</p>
+                            <pre><code>global pi is 3.14
+local radius is 5
+radius is now 10</code></pre>
+                        </div>
+                        <div class="doc-section">
+                            <h4>Data Types</h4>
+                            <ul>
+                                <li><strong>INT:</strong> Whole numbers (e.g. <code>42</code>, <code>-5</code>)</li>
+                                <li><strong>DECIMAL:</strong> Floats (e.g. <code>3.14</code>, <code>0.02</code>)</li>
+                                <li><strong>STRING:</strong> Written in curly braces (e.g. <code>{Hello, World!}</code>)</li>
+                                <li><strong>BOOL:</strong> Logical values (<code>true</code>, <code>false</code>)</li>
+                            </ul>
+                        </div>
+                        <div class="doc-section">
+                            <h4>Input & Output</h4>
+                            <p>Print values with <code>tell</code> and read inputs into mutable variables with <code>ask</code>:</p>
+                            <pre><code>tell {Type radius:}
+ask radius
+tell {Area: } pi * radius ^ 2</code></pre>
+                        </div>
+                        <div class="doc-section">
+                            <h4>Operators</h4>
+                            <p>Math precedence from highest to lowest:</p>
+                            <ul>
+                                <li><code>^</code> (Exponentiation, right-associative)</li>
+                                <li><code>*</code>, <code>/</code>, <code>%</code> (Multiplication, division, modulus)</li>
+                                <li><code>+</code>, <code>-</code> (Addition, subtraction)</li>
+                            </ul>
+                        </div>
+                        <div class="doc-section">
+                            <h4>Comments</h4>
+                            <p>Zeta supports single and multi-line comments:</p>
+                            <pre><code>&lt; Single line comment &gt;
+&lt;&lt; Multi-line comment 
+   continues here &gt;&gt;</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Workspace Center: Code Editor & Terminal Panel -->
+            <section class="code-zone">
+                <div class="card editor-card">
+                    <div class="card-header">
+                        <div class="tab active">main.zeta</div>
+                        <div class="file-info">Line 1, Col 1</div>
+                    </div>
+                    <div class="editor-container">
+                        <!-- Line Numbering Sidebar (synchronized scroll) -->
+                        <div class="line-numbers" id="line-numbers">
+                            <div>1</div>
+                        </div>
+                        <textarea class="code-editor" id="code-editor" spellcheck="false" autocomplete="off" placeholder="Write your Zeta program here..."></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bottom Console Zone -->
+            <section class="console-zone">
+                <div class="card console-card">
+                    <div class="card-header">
+                        <h3>Interactive Output Console</h3>
+                        <div class="console-actions">
+                            <span class="status-indicator loading" id="compiler-status">JVM Status: Booting</span>
+                            <button id="btn-clear-console" class="btn btn-tertiary">Clear Console</button>
+                        </div>
+                    </div>
+                    <div class="console-output" id="console-output">
+                        <div class="sys-msg">Initializing CheerpJ JVM environment... Please wait, as download cache handles WebAssembly compiler runtimes.</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Share Confirmation Modal -->
+        <div class="modal-overlay" id="share-modal">
+            <div class="modal-card">
+                <h3>Share Your Code</h3>
+                <p>Anyone with this link will be able to load and execute your exact program code instantly!</p>
+                <div class="share-box">
+                    <input type="text" id="share-url" readonly>
+                    <button id="btn-copy-share" class="btn btn-primary">Copy Link</button>
+                </div>
+                <button id="btn-close-modal" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script Logic -->
+    <script src="app.js"></script>
+</body>
+</html>
