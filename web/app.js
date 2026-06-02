@@ -275,7 +275,7 @@ async function executeCompiler() {
         
         const startTime = performance.now();
         // Invoke local relative /zeta.jar binary
-        const exitCode = await cheerpjRunJar('/app/zeta.jar', '/str/program.zeta');
+        const exitCode = await cheerpjRunJar('/app/zeta.jar?v=2', '/str/program.zeta');
         const endTime = performance.now();
         
         const elapsed = ((endTime - startTime) / 1000).toFixed(2);
