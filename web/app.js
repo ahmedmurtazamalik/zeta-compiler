@@ -529,11 +529,57 @@ function initEventListeners() {
     }
 }
 
-// 11. App Bootstrap
+// 11. Console Resizing Interaction
+function initConsoleResizer() {
+    const resizer = document.getElementById('console-resizer');
+    const workspace = document.querySelector('.app-workspace');
+    const consoleZone = document.querySelector('.console-zone');
+    
+    if (!resizer || !workspace || !consoleZone) return;
+    
+    let startY = 0;
+    let startHeight = 0;
+    
+    resizer.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        startY = e.clientY;
+        startHeight = consoleZone.getBoundingClientRect().height;
+        resizer.classList.add('active');
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    });
+    
+    function onMouseMove(e) {
+        const dy = e.clientY - startY;
+        let newHeight = startHeight - dy;
+        
+        const workspaceHeight = workspace.getBoundingClientRect().height;
+        const minHeight = 80;
+        const maxHeight = workspaceHeight * 0.8;
+        
+        if (newHeight < minHeight) newHeight = minHeight;
+        if (newHeight > maxHeight) newHeight = maxHeight;
+        
+        workspace.style.gridTemplateRows = `1fr ${newHeight}px`;
+        
+        // Sync scroll positions
+        syncScroll();
+    }
+    
+    function onMouseUp() {
+        resizer.classList.remove('active');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    }
+}
+
+// 12. App Bootstrap
 window.addEventListener('DOMContentLoaded', () => {
     initTheme();
     renderExamplesMenu();
     initEventListeners();
+    initConsoleResizer();
     
     // Load shared code or fall back to default template
     const sharedLoaded = loadSharedCode();
