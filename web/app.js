@@ -207,6 +207,43 @@ async function bootstrapJVM() {
     }
 }
 
+// Interactive standard input handlers
+let inputPromiseResolve = null;
+
+window.Java_org_zeta_compiler_interpreter_Interpreter_getNextInputLine = function(lib) {
+    const inputBar = document.getElementById('console-input-bar');
+    const inputField = document.getElementById('console-input-field');
+    if (inputBar && inputField) {
+        inputBar.style.display = 'flex';
+        inputField.value = '';
+        inputField.focus();
+    }
+    return new Promise((resolve) => {
+        inputPromiseResolve = resolve;
+    });
+};
+
+function submitConsoleInput() {
+    if (!inputPromiseResolve) return;
+    
+    const inputField = document.getElementById('console-input-field');
+    const inputBar = document.getElementById('console-input-bar');
+    if (!inputField || !inputBar) return;
+    
+    const value = inputField.value;
+    
+    // Echo the input back to the console output
+    appendConsole('stdout', `> ${value}`);
+    
+    // Hide input bar
+    inputBar.style.display = 'none';
+    
+    // Resolve promise
+    const resolve = inputPromiseResolve;
+    inputPromiseResolve = null;
+    resolve(value);
+}
+
 // Execute Code
 async function executeCompiler() {
     if (!isJvmReady) return;
@@ -248,6 +285,10 @@ async function executeCompiler() {
     } finally {
         console.log = originalLog;
         console.error = originalError;
+        
+        const inputBar = document.getElementById('console-input-bar');
+        if (inputBar) inputBar.style.display = 'none';
+        inputPromiseResolve = null;
         
         btnRun.disabled = false;
         runText.textContent = 'Run Code';
@@ -381,6 +422,22 @@ function initEventListeners() {
         examplesMenu.style.display = 'none';
         docsContent.style.display = 'flex';
     });
+
+    // Support interactive console input submission
+    const btnSubmitInput = document.getElementById('btn-submit-input');
+    const consoleInputField = document.getElementById('console-input-field');
+    
+    if (btnSubmitInput) {
+        btnSubmitInput.addEventListener('click', submitConsoleInput);
+    }
+    if (consoleInputField) {
+        consoleInputField.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitConsoleInput();
+            }
+        });
+    }
 }
 
 // 11. App Bootstrap

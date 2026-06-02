@@ -6,7 +6,7 @@
     {
       "src": "/zeta.jar",
       "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
+        "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
       },
       "dest": "/web/zeta.jar"
     },

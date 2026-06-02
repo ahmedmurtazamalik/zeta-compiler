@@ -688,3 +688,39 @@ body {
     font-size: 0.7rem;
 }
 
+/* ==========================================================================
+   Console Input Terminal Styling
+   ========================================================================== */
+.console-input-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 1rem;
+    background-color: rgba(0, 0, 0, 0.35);
+    border-top: 1px solid var(--border-subtle);
+}
+
+.prompt-symbol {
+    color: var(--primary);
+    font-family: 'Fira Code', monospace;
+    font-weight: 700;
+    font-size: 0.9rem;
+    user-select: none;
+}
+
+#console-input-field {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-main);
+    font-family: 'Fira Code', monospace;
+    font-size: 0.8rem;
+}
+
+#console-input-field::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+

@@ -28,7 +28,7 @@ public class Interpreter {
             }
             System.out.println(output.toString());
         } else if (stmt instanceof Ask ask) {
-            String input = scanner.nextLine();
+            String input = getNextInput();
             ZetaValue current = environment.get(ask.variableName());
             ZetaValue value;
             if (current.type() == ZetaType.INT) {
@@ -39,6 +39,19 @@ public class Interpreter {
                 value = new ZetaValue(ZetaType.STRING, input);
             }
             environment.set(ask.variableName(), value);
+        }
+    }
+    
+    public static native String getNextInputLine();
+
+    private String getNextInput() {
+        try {
+            return getNextInputLine();
+        } catch (UnsatisfiedLinkError e) {
+            if (scanner.hasNextLine()) {
+                return scanner.nextLine();
+            }
+            return "";
         }
     }
     
