@@ -43,8 +43,8 @@ public class Preprocessor {
                         break;
                     } else {
                         char commentChar = input.charAt(i);
-                        if (commentChar == '\n') {
-                            result.append('\n'); // Preserve the newline to maintain line indices
+                        if (commentChar == '\n' || commentChar == '\r') {
+                            result.append(commentChar); // Preserve the newline to maintain line indices
                         } else {
                             result.append(' '); // Blank out the character
                         }
@@ -67,8 +67,8 @@ public class Preprocessor {
                         break;
                     } else {
                         char commentChar = input.charAt(i);
-                        if (commentChar == '\n') {
-                            result.append('\n'); // Preserve the newline
+                        if (commentChar == '\n' || commentChar == '\r') {
+                            result.append(commentChar); // Preserve the newline
                         } else {
                             result.append(' '); // Blank out the character
                         }
