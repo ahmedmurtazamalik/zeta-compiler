@@ -187,7 +187,13 @@ async function bootstrapJVM() {
         }
         
         appendConsole('sys', 'Bootstrapping Java Virtual Machine (version 17)...');
-        await cheerpjInit({ version: 17, status: 'none' });
+        await cheerpjInit({
+            version: 17,
+            status: 'none',
+            natives: {
+                Java_org_zeta_compiler_interpreter_Interpreter_getNextInputLine
+            }
+        });
         
         isJvmReady = true;
         compilerStatus.textContent = 'JVM Status: Ready';
@@ -210,7 +216,7 @@ async function bootstrapJVM() {
 // Interactive standard input handlers
 let inputPromiseResolve = null;
 
-window.Java_org_zeta_compiler_interpreter_Interpreter_getNextInputLine = function(lib) {
+async function Java_org_zeta_compiler_interpreter_Interpreter_getNextInputLine(lib) {
     const inputBar = document.getElementById('console-input-bar');
     const inputField = document.getElementById('console-input-field');
     if (inputBar && inputField) {
@@ -221,7 +227,7 @@ window.Java_org_zeta_compiler_interpreter_Interpreter_getNextInputLine = functio
     return new Promise((resolve) => {
         inputPromiseResolve = resolve;
     });
-};
+}
 
 function submitConsoleInput() {
     if (!inputPromiseResolve) return;
@@ -275,7 +281,7 @@ async function executeCompiler() {
         
         const startTime = performance.now();
         // Invoke local relative /zeta.jar binary
-        const exitCode = await cheerpjRunJar('/app/zeta.jar?v=2', '/str/program.zeta');
+        const exitCode = await cheerpjRunJar('/app/zeta.jar?v=3', '/str/program.zeta');
         const endTime = performance.now();
         
         const elapsed = ((endTime - startTime) / 1000).toFixed(2);
